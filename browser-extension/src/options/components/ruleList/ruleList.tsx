@@ -49,7 +49,17 @@ const RuleList: FC<Props> = ({ rules, getRules, search = "", listClasses = "", p
   };
 
   const filteredList = sortRules(
-    rules.filter((ruleMetaData) => ruleMetaData.name.includes(search)),
+    rules.filter((ruleMetaData) => {
+      const searchLower = search.toLowerCase().trim();
+      if (!searchLower) return true;
+
+      const nameMatches = ruleMetaData.name.toLowerCase().includes(searchLower);
+      const sourceMatches = ruleMetaData.conditions.some(
+        (condition) => condition.source.toLowerCase().includes(searchLower)
+      );
+
+      return nameMatches || sourceMatches;
+    }),
     sortState
   );
   const title = rules.length ? `No Rule found for "${search}"` : "Seems You Have Not Created a Rule Yet";

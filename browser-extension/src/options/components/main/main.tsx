@@ -154,7 +154,7 @@ export default () => {
               </Button>
               <div className="text-sm">
                 <Input
-                  placeholder="Search By Rule Name"
+                  placeholder="Name or Source"
                   onChange={onChangeSearch}
                   value={search}
                   startIcon={<Icon name="search" />}

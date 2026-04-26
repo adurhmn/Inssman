@@ -6,9 +6,11 @@ alwaysApply: true
 
 # Inssman Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-25
+Auto-generated from all feature plans. Last updated: 2026-04-26
 
 ## Active Technologies
+- TypeScript 5.3.x with React 18 + React, react-router-dom, tailwind-merge (003-search-enhancement)
+- N/A (search is client-side filtering of in-memory data) (003-search-enhancement)
 
 - TypeScript 5.x with React 18 + React, tailwind-merge, react-router-dom (002-sort-rules)
 
@@ -28,6 +30,7 @@ npm test && npm run lint
 TypeScript 5.x with React 18: Follow standard conventions
 
 ## Recent Changes
+- 003-search-enhancement: Added TypeScript 5.3.x with React 18 + React, react-router-dom, tailwind-merge
 
 - 002-sort-rules: Added TypeScript 5.x with React 18 + React, tailwind-merge, react-router-dom
 
