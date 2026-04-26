@@ -1,10 +1,13 @@
 import { FC } from "react";
 import { twMerge } from "tailwind-merge";
+import { SortState, SortColumn } from "@models/sortModel";
 
 export type ListHeader = {
   title: string;
-  render: () => any;
+  render: (sortState?: SortState | null, onSort?: (column: SortColumn) => void) => any;
   classes?: string;
+  sortable?: boolean;
+  sortKey?: SortColumn;
 };
 
 export type ListItems = {
@@ -29,6 +32,8 @@ type Props = {
     title?: string;
     description?: string;
   };
+  sortState?: SortState | null;
+  onSort?: (column: SortColumn) => void;
 };
 
 const List: FC<Props> = ({
@@ -45,6 +50,8 @@ const List: FC<Props> = ({
     title: "Seems You Have No Item",
     description: "",
   },
+  sortState,
+  onSort,
 }) => {
   return (
     <>
@@ -52,7 +59,7 @@ const List: FC<Props> = ({
         {headers.map((item) => {
           return (
             <div key={item.title} className={twMerge(`flex-1 ${item.classes || ""}`, headerClasses)}>
-              {item.render()}
+              {item.render(sortState, onSort)}
             </div>
           );
         })}

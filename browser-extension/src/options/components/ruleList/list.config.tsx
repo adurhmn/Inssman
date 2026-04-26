@@ -1,15 +1,25 @@
 import Switcher from "@options/components/common/switcher/switcher";
 import Tooltip from "@options/components/common/tooltip/tooltip";
 import Icon from "@options/components/common/icon/icon";
+import SortIndicator from "@options/components/common/sortIndicator/sortIndicator";
 import { ListHeader, ListItems } from "@options/components/common/list/list";
 import { IconsMap, PageName } from "@/models/formFieldModel";
+import { SortState, SortColumn } from "@/models/sortModel";
 import { Link } from "react-router-dom";
 
 export const LIST_HEADERS: ListHeader[] = [
   {
     title: "Name",
-    render: function () {
-      return this.title;
+    sortable: true,
+    sortKey: "name",
+    render: function (sortState?: SortState | null, onSort?: (column: SortColumn) => void) {
+      const direction = sortState?.column === 'name' ? sortState.direction : null;
+      return (
+        <span className="flex items-center">
+          {this.title}
+          <SortIndicator direction={direction} onClick={() => onSort?.('name')} />
+        </span>
+      );
     },
   },
   {
@@ -26,11 +36,15 @@ export const LIST_HEADERS: ListHeader[] = [
   },
   {
     title: "Last Matched",
-    render: function () {
+    sortable: true,
+    sortKey: "lastMatchedTimestamp",
+    render: function (sortState?: SortState | null, onSort?: (column: SortColumn) => void) {
+      const direction = sortState?.column === 'lastMatchedTimestamp' ? sortState.direction : null;
       return (
-        <span>
+        <span className="flex items-center">
           {this.title}
           <sup className="inline-block text-xs text-red-500 bottom-4">Beta</sup>
+          <SortIndicator direction={direction} onClick={() => onSort?.('lastMatchedTimestamp')} />
         </span>
       );
     },

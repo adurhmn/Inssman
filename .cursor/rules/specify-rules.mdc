@@ -1,0 +1,35 @@
+---
+description: Project Development Guidelines
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Inssman Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-04-25
+
+## Active Technologies
+
+- TypeScript 5.x with React 18 + React, tailwind-merge, react-router-dom (002-sort-rules)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+npm test && npm run lint
+
+## Code Style
+
+TypeScript 5.x with React 18: Follow standard conventions
+
+## Recent Changes
+
+- 002-sort-rules: Added TypeScript 5.x with React 18 + React, tailwind-merge, react-router-dom
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
