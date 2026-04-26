@@ -8,6 +8,7 @@ import { LIST_HEADERS, LIST_ITEMS } from "./list.config";
 import { generateLastMatchedTime } from "@/utils/generateLastMatchedTime";
 import { cutString } from "@/utils/cutString";
 import { sortRules, getNextSortState } from "@/utils/sortRules";
+import { useColumnWidths } from "@/hooks/useColumnWidths";
 
 type Props = {
   rules: IRuleMetaData[];
@@ -20,6 +21,7 @@ type Props = {
 
 const RuleList: FC<Props> = ({ rules, getRules, search = "", listClasses = "", page = "options" }): ReactElement => {
   const [sortState, setSortState] = useState<SortState | null>(null);
+  const { columnWidths, handleResize, handleResizeEnd, handleResetColumn } = useColumnWidths();
 
   const handleSort = (column: SortColumn) => {
     setSortState(getNextSortState(sortState, column));
@@ -77,6 +79,10 @@ const RuleList: FC<Props> = ({ rules, getRules, search = "", listClasses = "", p
       listClasses={listClasses}
       sortState={sortState}
       onSort={handleSort}
+      columnWidths={columnWidths}
+      onColumnResize={handleResize}
+      onColumnResizeEnd={handleResizeEnd}
+      onColumnReset={handleResetColumn}
       options={{
         handleDelete,
         handleToggleRule,

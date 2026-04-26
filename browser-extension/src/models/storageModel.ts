@@ -4,6 +4,7 @@ export enum StorageKey {
   EXTENSION_STATUS = "extensionStatus",
   // deprecated property
   CONFIG = "config",
+  COLUMN_WIDTHS = "columnWidths",
 }
 
 export enum StorageItemType {

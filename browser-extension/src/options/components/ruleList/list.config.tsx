@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 export const LIST_HEADERS: ListHeader[] = [
   {
     title: "Name",
+    field: "name",
     sortable: true,
     sortKey: "name",
     render: function (sortState?: SortState | null, onSort?: (column: SortColumn) => void) {
@@ -24,18 +25,21 @@ export const LIST_HEADERS: ListHeader[] = [
   },
   {
     title: "Type",
+    field: "pageType",
     render: function () {
       return this.title;
     },
   },
   {
     title: "Source",
+    field: "source",
     render: function () {
       return this.title;
     },
   },
   {
     title: "Last Matched",
+    field: "lastMatchedTimestamp",
     sortable: true,
     sortKey: "lastMatchedTimestamp",
     render: function (sortState?: SortState | null, onSort?: (column: SortColumn) => void) {
@@ -51,12 +55,14 @@ export const LIST_HEADERS: ListHeader[] = [
   },
   {
     title: "Status",
+    field: "enabled",
     render: function () {
       return this.title;
     },
   },
   {
     title: "Actions",
+    field: "actions",
     classes: "flex justify-end",
     render: function () {
       return this.title;
@@ -84,12 +90,14 @@ export const LIST_ITEMS: ListItems[] = [
   },
   {
     field: "source",
-    render: function (item, handlers) {
-      const firstSource = handlers?.cutString(item.conditions[0][this.field], 15);
-      if (item.conditions.length > 1) {
-        return `${firstSource} + ${item.conditions.length - 1}`;
-      }
-      return firstSource;
+    render: function (item) {
+      const firstSource = item.conditions[0][this.field];
+      const additionalCount = item.conditions.length > 1 ? ` + ${item.conditions.length - 1}` : '';
+      return (
+        <span className="truncate block w-full" title={firstSource}>
+          {firstSource}{additionalCount}
+        </span>
+      );
     },
   },
   {
