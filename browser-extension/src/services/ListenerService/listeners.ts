@@ -9,6 +9,13 @@ const generateListeners = (callback: Function) => {
         removeListener: () => chrome.runtime.onInstalled.removeListener(listener),
       };
     })(),
+    [ListenerType.ON_STARTUP]: (() => {
+      const listener = callback(ListenerType.ON_STARTUP);
+      return {
+        addListener: () => chrome.runtime.onStartup.addListener(listener),
+        removeListener: () => chrome.runtime.onStartup.removeListener(listener),
+      };
+    })(),
     [ListenerType.ON_MESSAGE]: (() => {
       const listener = (...args) => {
         callback(ListenerType.ON_MESSAGE)(...args);

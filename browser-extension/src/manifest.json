@@ -18,6 +18,13 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
+      "js": ["bootstrap/bootstrap.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["setupContentConfig/setupContentConfig.js"],
       "run_at": "document_start",
       "all_frames": true

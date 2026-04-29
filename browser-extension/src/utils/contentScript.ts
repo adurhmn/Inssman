@@ -2,6 +2,7 @@ import MatcherService from "@services/MatcherService";
 import { NAMESPACE } from "@options/constant";
 import { IRuleMetaData, PageType } from "@/models/formFieldModel";
 import { PostMessageAction } from "@/models/postMessageActionModel";
+import type { MatchResult } from "@/cotentScript/types";
 
 let logShown = false;
 
@@ -161,18 +162,27 @@ export const notifyRequestRuleApplied = (message) => {
   );
 };
 
-export const getMatchedRuleByUrl = (url) => {
+export const getMatchedRuleByUrl = (url: string): MatchResult => {
+  const ns = window[NAMESPACE];
+  if (!ns || !Array.isArray(ns.rules)) {
+    return { status: "rules-not-ready" };
+  }
+
   const absoluteUrl = getAbsoluteUrl(url);
-  const matchedRules = {};
-  window[NAMESPACE].rules.forEach((rule) => {
+  const matchedRules: Partial<Record<PageType, IRuleMetaData>> = {};
+
+  ns.rules.forEach((rule: IRuleMetaData) => {
     rule.conditions.forEach((condition) => {
       if (MatcherService.isUrlsMatch(condition.source, absoluteUrl, condition.matchType)) {
         matchedRules[rule.pageType] = rule;
       }
     });
   });
-  // if (matchedRule) updateTimestamp(matchedRule);
-  return matchedRules;
+
+  if (Object.keys(matchedRules).length === 0) {
+    return { status: "no-match" };
+  }
+  return { status: "matched", rules: matchedRules };
 };
 
 export const updateTimestamp = (ruleMetaData: IRuleMetaData): void => {

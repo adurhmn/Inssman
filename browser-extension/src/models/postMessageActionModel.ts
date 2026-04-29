@@ -20,4 +20,6 @@ export enum PostMessageAction {
   ToggleExntesionOptions,
   ToggleRules,
   URLChanged,
+  RulesReceived,
+  InterceptorError,
 }

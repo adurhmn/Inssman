@@ -1,22 +1,15 @@
 import { ModificationType } from "@pages/forms/modifyResponse/generateModifyResponseRules";
 import { PageType } from "@models/formFieldModel";
 import {
-  // applyDelay,
   getAbsoluteUrl,
-  // getCustomRequestBody,
   getMatchedRuleByUrl,
-  // getFunctionFromCode,
-  // getMatchedDelayRule,
-  // getMatchedRequestRule,
-  // getMatchedResponseRule,
   isContentTypeJSON,
   isJSON,
   isPromise,
   jsonifyValidJSONString,
-  // notifyOnBeforeRequest,
-  // notifyRequestRuleApplied,
-  // notifyResponseRuleApplied,
 } from "@utils/contentScript";
+import { enqueue, reportInterceptorError } from "./queue";
+import type { MatchResult } from "./types";
 
 export const initXhrInterceptor = () => {
   const updateXhrReadyState = (xhr, readyState) => {
@@ -298,6 +291,42 @@ export const initXhrInterceptor = () => {
     } catch (err) {}
   };
 
+  /**
+   * Apply matched rules to the in-flight XHR. Identical body-modification
+   * and response-rule plumbing as the pre-fix path — extracted so it can
+   * be invoked from both the fast path and the post-enqueue retry path.
+   */
+  const applyRulesAndSend = function (
+    self: any,
+    data: any,
+    rules: Partial<Record<PageType, any>>
+  ): void {
+    const requestRule = rules[PageType.MODIFY_REQUEST_BODY];
+    const responseRule = rules[PageType.MODIFY_RESPONSE];
+
+    if (requestRule) {
+      if (requestRule.modificationType === ModificationType.DYNAMIC) {
+        self._xhr._requestData = new Function("args", `return (${requestRule.editorValue})(args);`)({
+          body: data,
+          method: self._xhr.method,
+          url: self._xhr._requestURL,
+        });
+      } else {
+        self._xhr._requestData = requestRule.editorValue;
+      }
+    }
+
+    self.responseRule = responseRule;
+    self._xhr.responseRule = self.responseRule;
+
+    if (self.responseRule) {
+      send.call(self._xhr, self._xhr._requestData);
+      return;
+    }
+
+    send.call(self, self._xhr._requestData);
+  };
+
   const send = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = async function (data) {
     try {
@@ -309,77 +338,51 @@ export const initXhrInterceptor = () => {
       // @ts-ignore
       this._xhr._requestData = data;
 
-      // const matchedDelayRulePair = getMatchedDelayRule({
-      //   url: this._xhr._requestURL,
-      //   method: this._xhr._method,
-      //   type: "xmlhttprequest",
-      //   initiator: location.origin, // initiator=origin. Should now contain port and protocol
-      // });
-      // if (matchedDelayRulePair) {
-      //   debug && console.log("[xhrInterceptor] matchedDelayRulePair", { matchedDelayRulePair });
-      //   await applyDelay(matchedDelayRulePair.delay);
-      // }
+      // @ts-ignore
+      const requestURL = this._xhr._requestURL;
+      // @ts-ignore
+      const method = this._xhr._method;
 
-      const { [PageType.MODIFY_REQUEST_BODY]: requestRule, [PageType.MODIFY_RESPONSE]: responseRule }: any =
-        // @ts-ignore
-        getMatchedRuleByUrl(this._xhr._requestURL);
+      let match: MatchResult = getMatchedRuleByUrl(requestURL);
 
-      console.log("requestRule", requestRule);
-
-      if (requestRule) {
-        if (requestRule.modificationType === ModificationType.DYNAMIC) {
-          // @ts-ignore
-          this._xhr._requestData = new Function("args", `return (${requestRule.editorValue})(args);`)({
-            body: data,
-            // @ts-ignore
-            method: this._xhr.method,
-            // @ts-ignore
-            url: this._xhr._requestURL,
-          });
-        } else {
-          // @ts-ignore
-          this._xhr._requestData = requestRule.editorValue;
-        }
-
-        // notifyRequestRuleApplied({
-        //   ruleDetails: requestRule,
-        //   requestDetails: {
-        //     // @ts-ignore
-        //     url: this._xhr._requestURL,
-        //     // @ts-ignore
-        //     method: this._xhr._method,
-        //     type: "xmlhttprequest",
-        //     timeStamp: Date.now(),
-        //   },
-        // });
+      if (match.status === "rules-not-ready") {
+        // Tier B: hold the request until rules arrive or the queue
+        // timeout fires. Re-evaluate exactly once after release.
+        await enqueue({ kind: "xhr", url: requestURL, method, enqueuedAt: performance.now() });
+        match = getMatchedRuleByUrl(requestURL);
       }
 
-      // await notifyOnBeforeRequest({
-      //   // @ts-ignore
-      //   url: this._xhr._requestURL,
-      //   // @ts-ignore
-      //   method: this._xhr._method,
-      //   type: "xmlhttprequest",
-      //   initiator: location.origin,
-      //   // @ts-ignore
-      //   requestHeaders: this._xhr._requestHeaders ?? {},
-      // });
-
-      // @ts-ignore
-      this.responseRule = responseRule;
-      // @ts-ignore
-      this._xhr.responseRule = this.responseRule;
-
-      // @ts-ignore
-      if (this.responseRule) {
-        // @ts-ignore
-        send.call(this._xhr, this._xhr._requestData);
+      if (match.status === "matched") {
+        applyRulesAndSend(this, data, match.rules);
         return;
       }
 
+      // "no-match" or post-timeout still-not-ready: bypass interception
+      // cleanly. The queue itself already logged a timeout warning when
+      // applicable.
       // @ts-ignore
       send.call(this, this._xhr._requestData);
-    } catch (err) {
+    } catch (err: any) {
+      // Per FR-008, internal errors MUST NOT silently fall through.
+      // Surface a developer-visible warning AND a best-effort
+      // `InterceptorError` to the SW, then fall back to the network so
+      // the page does not hang.
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[Inssman] Interceptor error — request fell through to network. URL: %s",
+        // @ts-ignore
+        this._xhr?._requestURL,
+        err
+      );
+      reportInterceptorError({
+        // @ts-ignore
+        url: this._xhr?._requestURL ?? "",
+        // @ts-ignore
+        method: this._xhr?._method ?? "",
+        kind: "xhr",
+        message: String(err?.message ?? err),
+        stack: err?.stack,
+      });
       send.call(this, data);
     }
   };

@@ -11,6 +11,7 @@ type Listeners = {
 
 export enum ListenerType {
   ON_INSTALL = "onInstalled",
+  ON_STARTUP = "onStartup",
   ON_MESSAGE = "onMessage",
   ON_MESSAGE_EXTERNAL = "onMessageExternal",
   ON_UPDATE_TAB = "onUpdated",
@@ -27,7 +28,11 @@ class ListenerService {
   private events: { [key: string]: Function[] } = {};
   private mapListener: MapListener = {};
   private executeListeners: boolean = true;
-  private excludedListeners: ListenerType[] = [ListenerType.ON_MESSAGE, ListenerType.ON_INSTALL];
+  private excludedListeners: ListenerType[] = [
+    ListenerType.ON_MESSAGE,
+    ListenerType.ON_INSTALL,
+    ListenerType.ON_STARTUP,
+  ];
   private constructor() {
     this.mapListener = generateListeners(this.listener);
   }

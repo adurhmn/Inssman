@@ -3,10 +3,9 @@ import InjectCodeService from "@services/InjectCodeService";
 import BaseService from "@services/BaseService";
 import storgeDataConverter from "./storgeDataConverter";
 import handleError from "./errorHandler";
-import { ModificationType } from "@/options/pages/forms/modifyResponse/generateModifyResponseRules";
 import { ListenerType } from "@services/ListenerService/ListenerService";
 import { PostMessageAction } from "@models/postMessageActionModel";
-import { IRuleMetaData, PageType } from "@models/formFieldModel";
+import { IRuleMetaData } from "@models/formFieldModel";
 import { StorageKey } from "@models/storageModel";
 import { UNINSTALL_URL, EXCLUDED_URLS } from "@options/constant";
 import "@services/RegisterService";
@@ -20,6 +19,7 @@ class ServiceWorker extends BaseService {
     chrome.runtime.setUninstallURL(UNINSTALL_URL);
 
     this.addListener(ListenerType.ON_INSTALL, this.onInstalled)
+      .addListener(ListenerType.ON_STARTUP, this.onStartup)
       .addListener(ListenerType.ON_MESSAGE, this.onMessage)
       .addListener(ListenerType.ON_COMMITTED, this.onCommitted);
 
@@ -27,28 +27,36 @@ class ServiceWorker extends BaseService {
       [PostMessageAction.GetUserId]: this.getUserId,
       [PostMessageAction.GetExtensionStatus]: this.getExtensionStatus,
       [PostMessageAction.URLChanged]: this.URLChanged,
+      // Diagnostic-only sinks per contracts/postMessageActions.md.
+      // Handlers MAY no-op but MUST NOT throw on receipt — implemented
+      // in T018 (Phase 4 / US2). Dedup / telemetry forwarding is
+      // intentionally future work.
+      [PostMessageAction.RulesReceived]: this.noopHandler,
+      [PostMessageAction.InterceptorError]: this.noopHandler,
     };
   }
 
+  noopHandler = async (): Promise<void> => {
+    /* intentional no-op — see contracts/postMessageActions.md */
+  };
+
   onCommitted = async (details) => {
-    console.log("details", details);
     const isUrlExluded: boolean = EXCLUDED_URLS.some((url) => details.url?.startsWith(url));
     if (isUrlExluded) {
       return;
     }
-    const filters = [
-      [
-        { key: "pageType", value: PageType.MODIFY_REQUEST_BODY },
-        { key: "enabled", value: true },
-      ],
-      [
-        { key: "pageType", value: PageType.MODIFY_RESPONSE },
-        { key: "enabled", value: true },
-      ],
-    ];
 
-    const rules: IRuleMetaData[] = await StorageService.getFilteredRules(filters);
+    const rules: IRuleMetaData[] = await InjectCodeService.getInterceptorRules();
     InjectCodeService.injectRules(details.tabId, rules);
+  };
+
+  onStartup = async (): Promise<void> => {
+    // SW wake / browser startup: any tab that is already open will
+    // never fire `onCommitted` for its current document, so push the
+    // active rule set into every open http(s) tab so the interceptor
+    // there has rules even if the user never navigates.
+    // See research.md R3 measure 2.
+    await InjectCodeService.injectRulesIntoOpenTabs();
   };
 
   onMessage = async (request, sender, sendResponse) => {
